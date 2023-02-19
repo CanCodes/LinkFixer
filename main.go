@@ -47,7 +47,7 @@ func main() {
 
 	discord.AddHandler(messageCreate)
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		regexPattern = regexp.MustCompile(`(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)`)
+		regexPattern = regexp.MustCompile(`(https?:\/\/)(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)`)
 		_ = s.UpdateWatchStatus(0, "chat for links")
 	})
 
@@ -67,7 +67,7 @@ func main() {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID || m.Author.Bot || m.Author.System {
+	if m.Author.ID == s.State.User.ID || m.Author.Bot || m.Author.System || m.WebhookID != "" {
 		return
 	}
 	matchedUrl := regexPattern.FindString(m.Content)
@@ -79,12 +79,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 		url.RawQuery = ""
+
 		// Logging for debug purposes
-		fmt.Printf("Link detected in guild %s, channel %s, by %s: %s\n", m.GuildID, m.ChannelID, m.Author.Username, matchedUrl)
+		if os.Getenv("DEBUG") == "true" {
+			fmt.Printf("Link detected in guild %s, channel %s, by %s: %s\n", m.GuildID, m.ChannelID, m.Author.Username, matchedUrl)
+		}
 
 		// Matching link to a replacement link
 		for key, link := range links {
-			if strings.Contains(url.Hostname(), key) {
+			if url.Host == key || url.Host == "www."+key {
 				_ = s.ChannelTyping(m.ChannelID)
 				url.Host = link.Replace
 				if link.CheckVideo {
