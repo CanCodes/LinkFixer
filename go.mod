@@ -1,4 +1,4 @@
-module github.com/cancodes/fixlinks
+module github.com/cancodes/linkfixer
 
 go 1.19
 
