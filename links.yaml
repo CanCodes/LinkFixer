@@ -1,3 +1,6 @@
-tiktok.com: vm.tiktxk.com
-twitter.com: fxtwitter.com
-instagram.com: ddinstagram.com
+tiktok.com:
+  check-video: false
+  replace: vm.tiktxk.com
+instagram.com:
+  check-video: false
+  replace: ddinstagram.com

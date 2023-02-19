@@ -14,10 +14,16 @@ import (
 )
 
 var regexPattern *regexp.Regexp
-var links map[string]string
+
+type Link struct {
+	CheckVideo bool   `yaml:"check-video"`
+	Replace    string `yaml:"replace"`
+}
+
+var links map[string]Link
 
 func loadLinks() {
-	yamlFile, err := os.ReadFile("links.yml")
+	yamlFile, err := os.ReadFile("links.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -25,8 +31,8 @@ func loadLinks() {
 	if err != nil {
 		panic(err)
 	}
-	for key, value := range links {
-		_, _ = fmt.Printf("Loaded replacement link for %s: %s\n", key, value)
+	for key, link := range links {
+		_, _ = fmt.Printf("Loaded replacement link for %s: %s\n", key, link.Replace)
 	}
 }
 
@@ -76,21 +82,21 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// Logging for debug purposes
 		fmt.Printf("Link detected in guild %s, channel %s, by %s: %s\n", m.GuildID, m.ChannelID, m.Author.Username, matchedUrl)
 
-		// Matching urls
-		// TODO: use maps for matching
-		if url.Host == "tiktok.com" || url.Host == "vm.tiktok.com" {
-			url.Host = "vm.tiktxk.com"
-			_ = s.ChannelTyping(m.ChannelID)
-			sendLinkMessage(s, m, matchedUrl, *url)
-		} else if url.Host == "instagram.com" || url.Host == "www.instagram.com" {
-			url.Host = "ddinstagram.com"
-			_ = s.ChannelTyping(m.ChannelID)
-			sendLinkMessage(s, m, matchedUrl, *url)
-		} else if url.Host == "twitter.com" || url.Host == "www.twitter.com" {
-			_ = s.ChannelTyping(m.ChannelID)
-			if checkForVideo(s, m) {
-				url.Host = "fxtwitter.com"
+		// Matching link to a replacement link
+		for key, link := range links {
+			if strings.Contains(url.Hostname(), key) {
+				_ = s.ChannelTyping(m.ChannelID)
+				url.Host = link.Replace
+				if link.CheckVideo {
+					go func() {
+						if checkForVideo(s, m) {
+							sendLinkMessage(s, m, matchedUrl, *url)
+						}
+					}()
+					return
+				}
 				sendLinkMessage(s, m, matchedUrl, *url)
+				return
 			}
 		}
 	}
